@@ -1,4 +1,4 @@
-import { Predicate, Message, OpenAIModel } from "./models";
+import { Predicate, Message, OpenAIModel } from "../shared/models";
 import { OpenAIApi, Configuration } from "openai";
 
 export type EvaluatorOptions = {

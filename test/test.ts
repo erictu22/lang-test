@@ -1,5 +1,5 @@
-import { EvaluatorOptions, MockEvaluator } from "../src/evaluate";
-import { Predicate } from "../src/models";
+import { EvaluatorOptions, MockEvaluator } from "../src/api/evaluate";
+import { Predicate } from "../src/shared/models";
 
 describe("MockEvaluator", () => {
   const options: EvaluatorOptions = {

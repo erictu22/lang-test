@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
 import { Command } from "commander";
-import { EvaluatorOptions, OpenAiEvaluator } from "./evaluate";
-import { Message, Predicate } from "./models";
+import { EvaluatorOptions, OpenAiEvaluator } from "./api/evaluate";
+import { Message, Predicate } from "./shared/models";
 
 const program = new Command();
 
