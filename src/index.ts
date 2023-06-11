@@ -1,19 +1,41 @@
-import express, { Request, Response } from "express";
+#!/usr/bin/env node
 
-const app = express();
+import { Command } from "commander";
+import { EvaluatorOptions, OpenAiEvaluator } from "./evaluate";
+import { Message, Predicate } from "./models";
 
-app.use(express.json());
+const program = new Command();
 
-app.post("/", (req: Request, res: Response) => {
-  const { name, age } = req.body;
+program
+  .requiredOption("-k, --apiKey <apiKey>", "OpenAI API key")
+  .requiredOption("-m, --model <model>", "OpenAI model")
+  .requiredOption("-n, --numTrials <numTrials>", "Number of trials")
+  .requiredOption("-i, --inputPrompts <inputPrompts>", "Input prompts (JSON list)")
+  .requiredOption("-e, --evalPrompts <evalPrompts>", "Evaluation prompts (JSON list)")
+  .parse(process.argv);
 
-  if (typeof age !== "number" || age < 0) {
-    return res
-      .status(400)
-      .json({ error: "Invalid age. Age must be a positive number." });
+const { apiKey, model, numTrials, inputPrompts, evalPrompts } = program.opts();
+const evaluatorOptions: EvaluatorOptions = {
+  inputPrompts: parseInputPrompts(inputPrompts),
+  evalPrompts: parseEvalPrompts(evalPrompts),
+  numTrials: parseInt(numTrials),
+};
+
+const evaluator = new OpenAiEvaluator(apiKey, model, evaluatorOptions);
+
+(async () => {
+  try {
+    const result = await evaluator.evaluate();
+    console.log("Evaluation result:", result);
+  } catch (error) {
+    console.error("Error occurred during evaluation:", error);
   }
+})();
 
-  res.send(`Hello ${name}! Your age is ${age}.`);
-});
+function parseInputPrompts(inputPrompts: string): Message[] {
+  return []; // TODO: implement
+}
 
-export default app;
+function parseEvalPrompts(evalPrompts: string): Predicate[] {
+  return []; // TODO: implement
+}

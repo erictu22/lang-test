@@ -1,57 +1,100 @@
-import { Message, Model } from "./models";
+import { Predicate, Message, OpenAIModel } from "./models";
 import { OpenAIApi, Configuration } from "openai";
 
-type EvaluatorOptions = {
+export type EvaluatorOptions = {
   readonly inputPrompts: Message[];
-  readonly evalPrompts: string[];
+  readonly evalPrompts: Predicate[];
   readonly numTrials: number;
 };
 
 abstract class Evaluator {
   protected inputPrompts: Message[];
-  protected evalPrompts: string[];
+  protected predicates: Predicate[];
   protected numTrials: number;
 
   constructor(options: EvaluatorOptions) {
     this.inputPrompts = options.inputPrompts;
     this.numTrials = options.numTrials;
-    this.evalPrompts = options.evalPrompts;
+    this.predicates = options.evalPrompts;
   }
 
-  async evaluate(): Promise<Record<string, number>> {
-    const output: Record<string, number> = {};
-    for (let i = 0; i < this.numTrials; i++) {
+  async evaluate(): Promise<Record<string, string[]>> {
+    // TODO: Check that predicates are unique
+    if (this.predicates.length === 0) {
+        throw new Error("No predicates were provided");
+    }
+
+    const responsePredicateMatches: Record<string, string[]> = {};
+
+    const responses: string[] = [];
+    for (let trialNum = 0; trialNum < this.numTrials; trialNum++) {
       const inputPromptResponse = await this.getInputPromptResponse();
       if (inputPromptResponse === undefined)
         throw new Error("Model returned an empty response");
-      for (const evalPrompt in this.evalPrompts) {
-        const didPassEval = await this.getEvaluation(
-          evalPrompt,
-          inputPromptResponse
+      responses.push(inputPromptResponse);
+    }
+
+    for (const targetResponse of responses) {
+      for (const predicate of this.predicates) {
+        const didPassEval = await this.applyPredicate(
+          predicate,
+          targetResponse
         );
+
         if (didPassEval) {
-          output[evalPrompt] ? output[evalPrompt]++ : (output[evalPrompt] = 1);
+          if (responsePredicateMatches[targetResponse]) {
+            const isSeen = responsePredicateMatches[targetResponse].includes(
+              predicate.id
+            );
+            if (!isSeen)
+              responsePredicateMatches[targetResponse].push(predicate.id);
+          } else {
+            responsePredicateMatches[targetResponse] = [predicate.id];
+          }
         }
       }
     }
-    return output;
+    return responsePredicateMatches;
   }
 
   abstract getInputPromptResponse(): Promise<string | undefined>;
 
-  abstract getEvaluation(
-    evalPrompt: string,
+  async applyPredicate(
+    predicate: Predicate,
+    inputPromptResponse: string
+  ): Promise<boolean> {
+    switch (predicate.type) {
+      case "regexp":
+        return this.applyRegexPredicate(predicate.content, inputPromptResponse);
+      case "prompt":
+        return this.applyPromptPredicate(
+          predicate.content,
+          inputPromptResponse
+        );
+    }
+  }
+
+  async applyRegexPredicate(
+    regExp: string,
+    inputPromptResponse: string
+  ): Promise<boolean> {
+    const regex = new RegExp(regExp);
+    return regex.test(inputPromptResponse);
+  }
+
+  abstract applyPromptPredicate(
+    prompt: string,
     inputPromptResponse: string
   ): Promise<boolean>;
 }
 
-class OpenAiEvaluator extends Evaluator {
+export class OpenAiEvaluator extends Evaluator {
   private openai: OpenAIApi;
-  private model: Model;
+  private model: OpenAIModel;
 
-  constructor(apiKey: string, model: Model, options: EvaluatorOptions) {
+  constructor(openAiApiKey: string, model: OpenAIModel, options: EvaluatorOptions) {
     super(options);
-    this.openai = new OpenAIApi(new Configuration({ apiKey }));
+    this.openai = new OpenAIApi(new Configuration({ apiKey: openAiApiKey }));
     this.model = model;
   }
 
@@ -62,18 +105,16 @@ class OpenAiEvaluator extends Evaluator {
       temperature: 0.99,
     });
 
-    if (response.data.choices.length === 0)
-      throw new Error("An error with OpenAI has occured");
     return response.data.choices[0].message?.content;
   }
 
-  async getEvaluation(
-    evalPrompt: string,
+  async applyPromptPredicate(
+    prompt: string,
     inputPromptResponse: string
   ): Promise<boolean> {
     const structuredQuestion: Message = {
       role: "user",
-      content: `${evalPrompt}? Answer 'yes' or 'no' only.\n"""\n${inputPromptResponse}\n"""`,
+      content: `${prompt}? Answer 'yes' or 'no' only.\n"""\n${inputPromptResponse}\n"""`,
     };
 
     const response = await this.openai.createChatCompletion({
@@ -83,23 +124,28 @@ class OpenAiEvaluator extends Evaluator {
     });
 
     const responseText = response.data.choices[0].message?.content;
-    return responseText === "yes";
+
+    if (responseText === undefined)
+      throw new Error(`Error applying prompt predicate: ${prompt}`);
+    return responseText?.toLowerCase().includes("yes");
   }
 }
 
-class MockEvaluator extends Evaluator {
+export class MockEvaluator extends Evaluator {
+    private responseCount : number = 0;
+
   constructor(options: EvaluatorOptions) {
     super(options);
   }
 
   async getInputPromptResponse(): Promise<string | undefined> {
-    return "This is a mock response";
+    this.responseCount++;
+    return `This is a mock response ${this.responseCount}`;
   }
-
-  async getEvaluation(
-    evalPrompt: string,
+  applyPromptPredicate(
+    prompt: string,
     inputPromptResponse: string
   ): Promise<boolean> {
-    return true;
+    return new Promise((resolve) => resolve(true));
   }
 }
