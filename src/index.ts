@@ -10,8 +10,14 @@ program
   .requiredOption("-k, --apiKey <apiKey>", "OpenAI API key")
   .requiredOption("-m, --model <model>", "OpenAI model")
   .requiredOption("-n, --numTrials <numTrials>", "Number of trials")
-  .requiredOption("-i, --inputPrompts <inputPrompts>", "Input prompts (JSON list)")
-  .requiredOption("-e, --evalPrompts <evalPrompts>", "Evaluation prompts (JSON list)")
+  .requiredOption(
+    "-i, --inputPrompts <inputPrompts>",
+    "Input prompts (JSON list)"
+  )
+  .requiredOption(
+    "-e, --evalPrompts <evalPrompts>",
+    "Evaluation prompts (JSON list)"
+  )
   .parse(process.argv);
 
 const { apiKey, model, numTrials, inputPrompts, evalPrompts } = program.opts();

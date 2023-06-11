@@ -21,7 +21,7 @@ abstract class Evaluator {
   async evaluate(): Promise<Record<string, string[]>> {
     // TODO: Check that predicates are unique
     if (this.predicates.length === 0) {
-        throw new Error("No predicates were provided");
+      throw new Error("No predicates were provided");
     }
 
     const responsePredicateMatches: Record<string, string[]> = {};
@@ -92,7 +92,11 @@ export class OpenAiEvaluator extends Evaluator {
   private openai: OpenAIApi;
   private model: OpenAIModel;
 
-  constructor(openAiApiKey: string, model: OpenAIModel, options: EvaluatorOptions) {
+  constructor(
+    openAiApiKey: string,
+    model: OpenAIModel,
+    options: EvaluatorOptions
+  ) {
     super(options);
     this.openai = new OpenAIApi(new Configuration({ apiKey: openAiApiKey }));
     this.model = model;
@@ -132,7 +136,7 @@ export class OpenAiEvaluator extends Evaluator {
 }
 
 export class MockEvaluator extends Evaluator {
-    private responseCount : number = 0;
+  private responseCount: number = 0;
 
   constructor(options: EvaluatorOptions) {
     super(options);

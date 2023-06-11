@@ -14,7 +14,7 @@ export type Message = {
 };
 
 export type Predicate = {
-  type : 'regexp' | 'prompt',
-  id : string,
-  content : string
-}
+  type: "regexp" | "prompt";
+  id: string;
+  content: string;
+};
