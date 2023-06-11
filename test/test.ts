@@ -1,5 +1,5 @@
 import request from 'supertest';
-import app from '../src/index';
+import app from '../src';
 
 describe('POST /', () => {
   it('should return a greeting with name and age', async () => {
