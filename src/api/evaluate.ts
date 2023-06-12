@@ -173,7 +173,7 @@ export class OpenAiEvaluator extends Evaluator {
 
     const response = await this.openai.createChatCompletion({
       messages: [structuredQuestion],
-      model: this.model,
+      model: "gpt-3.5-turbo-0301",
       temperature: 0.99,
       max_tokens: this.maxTokens,
     });
