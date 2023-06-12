@@ -1,5 +1,5 @@
-# LangTest
-A prompt testing framework
+# LangTest (WIP)
+LangTest is a prompt testing framework that uses another frozen model and/or regular expressions to verify certain aspects of a given prompt’s responses.
 
 # CLI
 
