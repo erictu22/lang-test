@@ -1,5 +1,5 @@
 # LangTest (WIP)
-LangTest is a prompt testing framework that uses a frozen model (gpt-3.5-turbo-0301) and/or regular expressions to verify certain aspects of a given prompt’s responses.
+LangTest is a semi-objective prompt testing framework that uses a frozen model (gpt-3.5-turbo-0301) and/or regular expressions to verify certain aspects of a given prompt’s responses.
 
 # CLI
 
