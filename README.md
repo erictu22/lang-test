@@ -97,8 +97,8 @@ This method generates responses using the OpenAI API and applies the set of pred
 
 This method applies the "prompt" type of predicate to a response. It takes a string `prompt` representing the prompt to use for generating the response, and a string `inputPromptResponse` representing the response to which the prompt is being applied. It returns a boolean indicating whether the predicate passed or failed.
 
-### Example usage
-You can run this code by running `npm run start` from the root directory
+# Example Usage
+You can run the following snippet by running `npm run start` from the root directory
 ```javascript
 const evaluationOptions : EvaluatorOptions = {
   prompt: [
