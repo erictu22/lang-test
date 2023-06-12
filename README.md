@@ -95,27 +95,10 @@ async evaluate(): Promise<Record<string, number>>
 
 This method generates responses using the OpenAI API and applies the set of predicates to each response. It returns a dictionary containing the number of times each predicate passed.
 
-#### fetchPromptResponse
-
-```javascript
-async fetchPromptResponse(): Promise<string | undefined>
-```
-
-This method generates a response using the OpenAI API based on the input prompts provided in the `EvaluatorOptions`. It returns the response as a string, or `undefined` if the response was empty or could not be generated.
-
-#### applyPromptPredicate
-
-```javascript
-async applyPromptPredicate(
-    prompt: string,
-    inputPromptResponse: string
-): Promise<boolean>
-```
-
 This method applies the "prompt" type of predicate to a response. It takes a string `prompt` representing the prompt to use for generating the response, and a string `inputPromptResponse` representing the response to which the prompt is being applied. It returns a boolean indicating whether the predicate passed or failed.
 
 ### Example usage
-
+You can run this code by running `npm run start` from the root directory
 ```javascript
 const evaluationOptions : EvaluatorOptions = {
   prompt: [
@@ -150,5 +133,14 @@ const maxTokens = 100;
 const evaluator = new OpenAiEvaluator(openAiApiKey, model, maxTokens, evaluationOptions);
 evaluator.evaluate().then((results) => console.log(results));
 ```
+
+### Response
+```javascript
+{
+  "Was the exact word 'Banana' mentioned?": 4,
+  'Were apples mentioned?': 9
+}
+```
+Note: Be mindful of the OpenAI rate limits
 
 This example creates a new `OpenAIEvaluator` object and runs an evaluation of the OpenAI model specified by `model`. The evaluation generates responses using the input prompt provided, and applies two predicates to each response to determine whether the response contains the word "apple" and whether it matches the regular expression ".*banana.*". The evaluation is run 10 times, and the results are printed to the console.

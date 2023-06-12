@@ -29,7 +29,7 @@ const evaluationOptions: EvaluatorOptions = {
   },
 };
 
-const openAiApiKey = "OPEN_AI_API_KEY";
+const openAiApiKey = "<OPENAI_API_KEY>";
 const model: OpenAIModel = "gpt-3.5-turbo";
 const maxTokens = 100;
 
