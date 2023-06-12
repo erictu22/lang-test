@@ -1,9 +1,10 @@
+import { response } from "express";
 import { Predicate, Message, OpenAIModel } from "../shared/models";
 import { OpenAIApi, Configuration } from "openai";
 
 export type EvaluatorOptions = {
   readonly inputPrompts: Message[];
-  readonly evalPrompts: Predicate[];
+  readonly predicates: Predicate[];
   readonly numTrials: number;
 };
 
@@ -15,49 +16,54 @@ abstract class Evaluator {
   constructor(options: EvaluatorOptions) {
     this.inputPrompts = options.inputPrompts;
     this.numTrials = options.numTrials;
-    this.predicates = options.evalPrompts;
+    this.predicates = options.predicates;
   }
 
-  async evaluate(): Promise<Record<string, string[]>> {
-    // TODO: Check that predicates are unique
+  async evaluate(): Promise<Record<string, number>> {
+    const set = new Set(this.predicates.map((p) => p.id));
+    if (set.size !== this.predicates.length) {
+      throw new Error("Predicate ids must be unique");
+    }
+
     if (this.predicates.length === 0) {
       throw new Error("No predicates were provided");
     }
 
-    const responsePredicateMatches: Record<string, string[]> = {};
+    const responsePredicateMatches: Record<string, number> = {};
 
-    const responses: string[] = [];
+    const responsePromises: Promise<void>[] = [];
     for (let trialNum = 0; trialNum < this.numTrials; trialNum++) {
-      const inputPromptResponse = await this.getInputPromptResponse();
-      if (inputPromptResponse === undefined)
-        throw new Error("Model returned an empty response");
-      responses.push(inputPromptResponse);
-    }
-
-    for (const targetResponse of responses) {
-      for (const predicate of this.predicates) {
-        const didPassEval = await this.applyPredicate(
-          predicate,
-          targetResponse
-        );
-
-        if (didPassEval) {
-          if (responsePredicateMatches[targetResponse]) {
-            const isSeen = responsePredicateMatches[targetResponse].includes(
-              predicate.id
-            );
-            if (!isSeen)
-              responsePredicateMatches[targetResponse].push(predicate.id);
-          } else {
-            responsePredicateMatches[targetResponse] = [predicate.id];
-          }
+      const evaulation = this.fetchPromptResponse().then(
+        async (targetResponse) => {
+          if (targetResponse === undefined)
+            throw new Error("Model returned an empty response");
+          await this.evaluateResponse(targetResponse, responsePredicateMatches);
         }
-      }
+      );
+      responsePromises.push(evaulation);
     }
+
+    await Promise.all(responsePromises);
     return responsePredicateMatches;
   }
 
-  abstract getInputPromptResponse(): Promise<string | undefined>;
+  async evaluateResponse(
+    targetResponse: string,
+    responsePredicateMatches: Record<string, number>
+  ) {
+    for (const predicate of this.predicates) {
+      const didPassEval = await this.applyPredicate(predicate, targetResponse);
+
+      if (!responsePredicateMatches[predicate.id])
+        responsePredicateMatches[predicate.id] = 0;
+
+      if (didPassEval) {
+        responsePredicateMatches[predicate.id]++;
+      }
+    }
+  }
+
+  abstract fetchPromptResponse(): Promise<string | undefined>;
 
   async applyPredicate(
     predicate: Predicate,
@@ -91,18 +97,21 @@ abstract class Evaluator {
 export class OpenAiEvaluator extends Evaluator {
   private openai: OpenAIApi;
   private model: OpenAIModel;
+  private maxTokens: number;
 
   constructor(
     openAiApiKey: string,
     model: OpenAIModel,
+    maxTokens: number,
     options: EvaluatorOptions
   ) {
     super(options);
     this.openai = new OpenAIApi(new Configuration({ apiKey: openAiApiKey }));
     this.model = model;
+    this.maxTokens = maxTokens;
   }
 
-  async getInputPromptResponse(): Promise<string | undefined> {
+  async fetchPromptResponse(): Promise<string | undefined> {
     const response = await this.openai.createChatCompletion({
       messages: this.inputPrompts,
       model: this.model,
@@ -125,6 +134,7 @@ export class OpenAiEvaluator extends Evaluator {
       messages: [structuredQuestion],
       model: this.model,
       temperature: 0.99,
+      max_tokens: this.maxTokens,
     });
 
     const responseText = response.data.choices[0].message?.content;
@@ -142,7 +152,7 @@ export class MockEvaluator extends Evaluator {
     super(options);
   }
 
-  async getInputPromptResponse(): Promise<string | undefined> {
+  async fetchPromptResponse(): Promise<string | undefined> {
     this.responseCount++;
     return `This is a mock response ${this.responseCount}`;
   }

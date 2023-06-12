@@ -23,7 +23,7 @@ program
 const { apiKey, model, numTrials, inputPrompts, evalPrompts } = program.opts();
 const evaluatorOptions: EvaluatorOptions = {
   inputPrompts: parseInputPrompts(inputPrompts),
-  evalPrompts: parseEvalPrompts(evalPrompts),
+  predicates: parseEvalPrompts(evalPrompts),
   numTrials: parseInt(numTrials),
 };
 
