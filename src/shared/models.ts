@@ -13,8 +13,10 @@ export type Message = {
   content: string;
 };
 
+export type PredicateType = "regexp" | "prompt";
+
 export type Predicate = {
-  type: "regexp" | "prompt";
+  type: PredicateType;
   id: string;
   content: string;
 };
