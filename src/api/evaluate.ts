@@ -68,34 +68,40 @@ abstract class Evaluator {
     targetResponse: string,
     responsePredicateMatches: Record<string, number>
   ) {
+    const predicatePromises: Promise<void>[] = [];
     for (const predicate of this.predicates) {
       // add a delay here to avoid hitting the OpenAI API rate limit
       await new Promise((resolve) => setTimeout(resolve, RATE_LIMIT_DELAY));
 
-      let didPassEval = false;
+      const predicatePromise: Promise<void> = this.applyPredicate(
+        predicate,
+        targetResponse
+      )
+        .then((didPassEval) => {
+          if (!responsePredicateMatches[predicate.id])
+            responsePredicateMatches[predicate.id] = 0;
 
-      try {
-        didPassEval = await this.applyPredicate(predicate, targetResponse);
-      } catch (e) {
-        console.log(`Error applying predicate ${predicate.id}: ${e}`);
-      }
+          if (didPassEval) {
+            responsePredicateMatches[predicate.id]++;
+          }
 
-      if (!responsePredicateMatches[predicate.id])
-        responsePredicateMatches[predicate.id] = 0;
-
-      if (didPassEval) {
-        responsePredicateMatches[predicate.id]++;
-      }
-
-      if (this.updateHandler) {
-        this.updateHandler({
-          predicateId: predicate.id,
-          targetResponse: targetResponse,
-          didPass: didPassEval,
-          updatedCounts: responsePredicateMatches,
+          if (this.updateHandler) {
+            this.updateHandler({
+              predicateId: predicate.id,
+              targetResponse: targetResponse,
+              didPass: didPassEval,
+              updatedCounts: responsePredicateMatches,
+            });
+          }
+        })
+        .catch((e) => {
+          console.log(`Error applying predicate ${predicate.id}: ${e}`);
         });
-      }
+
+      predicatePromises.push(predicatePromise);
     }
+
+    await Promise.all(predicatePromises);
   }
 
   abstract fetchPromptResponse(): Promise<string | undefined>;
