@@ -22,7 +22,7 @@ program
 const { apiKey, model, numTrials, targetPrompt, predicates, maxTokens } =
   program.opts();
 const evaluatorOptions: EvaluatorOptions = {
-  inputPrompts: [{ role: "user", content: targetPrompt }],
+  prompt: [{ role: "user", content: targetPrompt }],
   predicates: parsePredicates(predicates),
   numTrials: parseInt(numTrials),
 };

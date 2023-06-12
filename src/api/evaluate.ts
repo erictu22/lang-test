@@ -12,7 +12,7 @@ interface EvaluationUpdate {
 }
 
 export type EvaluatorOptions = {
-  readonly inputPrompts: Message[];
+  readonly prompt: Message[];
   readonly predicates: Predicate[];
   readonly numTrials: number;
   readonly updateHandler?: (update: EvaluationUpdate) => void;
@@ -25,7 +25,7 @@ abstract class Evaluator {
   protected updateHandler: undefined | ((update: EvaluationUpdate) => void);
 
   constructor(options: EvaluatorOptions) {
-    this.inputPrompts = options.inputPrompts;
+    this.inputPrompts = options.prompt;
     this.numTrials = options.numTrials;
     this.predicates = options.predicates;
     this.updateHandler = options.updateHandler;

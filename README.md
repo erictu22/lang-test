@@ -17,10 +17,10 @@ npm install
 
 ## Usage
 
-To run the CLI, use the following command:
+To run the CLI, use the following command from the root directory:
 
 ```
-node index.js
+node dist/index.js
 ```
 
 The CLI options are as follows:
@@ -71,14 +71,14 @@ constructor(
 
 ```javascript
 interface EvaluatorOptions = {
-  readonly inputPrompts: Message[];
+  readonly prompt: Message[];
   readonly predicates: Predicate[];
   readonly numTrials: number;
   readonly updateHandler?: (update: EvaluationUpdate) => void;
 };
 ```
 
-- `inputPrompts`: An array of `Message` objects representing the messages to use as prompts for generating responses.
+- `prompt`: An array of `Message` objects representing the messages to use as a prompt for generating responses.
 - `predicates`: An array of `Predicate` objects representing the predicates to use for evaluating responses.
 - `numTrials`: An integer representing the number of times to evaluate the model (i.e. generate a response and apply the predicates).
 - `updateHandler` (optional): A function that will be called with an `EvaluationUpdate` object every time a predicate is applied to a response. This function can be used to monitor the progress of the evaluation.
@@ -117,41 +117,38 @@ This method applies the "prompt" type of predicate to a response. It takes a str
 ### Example usage
 
 ```javascript
-import { OpenAIApi } from "openai";
-import { OpenAIModel } from "../shared/models";
-import { OpenAiEvaluator } from "./OpenAIEvaluator";
-
-const evaluationOptions = {
-  inputPrompts: [
+const evaluationOptions : EvaluatorOptions = {
+  prompt: [
     {
       role: "user",
-      content: "This is the prompt for the response"
+      content: "List me some red and yellow fruits"
     }
   ],
   predicates: [
     {
-      id: "predicate1",
+      id: "Were apples mentioned?",
       type: "prompt",
-      content: "Does the response contain the word 'apple'?"
+      content: "Does the following text contain the word 'apple'?"
     },
     {
-      id: "predicate2",
+      id: "Was the exact word 'Banana' mentioned?",
       type: "regexp",
-      content: ".*banana.*"
+      content: ".*Banana.*"
     }
   ],
-  numTrials: 10
+  numTrials: 10,
+  updateHandler: (update) => {
+    console.log(`Applying "${update.predicateId}" to "${update.targetResponse}"`);
+    console.log(`response ${update.didPass ? "passed" : "failed"}`)
+}
 };
 
-const openAiApiKey = "YOUR_API_KEY_HERE";
-const openai = new OpenAIApi({ apiKey: openAiApiKey });
-const model = new OpenAIModel("your-model-ID");
+const openAiApiKey = "OPEN_AI_API_KEY";
+const model : OpenAIModel = 'gpt-3.5-turbo';
 const maxTokens = 100;
 
 const evaluator = new OpenAiEvaluator(openAiApiKey, model, maxTokens, evaluationOptions);
-const results = await evaluator.evaluate();
-
-console.log(results);
+evaluator.evaluate().then((results) => console.log(results));
 ```
 
 This example creates a new `OpenAIEvaluator` object and runs an evaluation of the OpenAI model specified by `model`. The evaluation generates responses using the input prompt provided, and applies two predicates to each response to determine whether the response contains the word "apple" and whether it matches the regular expression ".*banana.*". The evaluation is run 10 times, and the results are printed to the console.

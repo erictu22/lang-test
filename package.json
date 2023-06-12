@@ -4,7 +4,7 @@
   "description": "A lightweight prompt verification framework",
   "main": "index.ts",
   "scripts": {
-    "start": "npm run build && node dist/index.js",
+    "start": "npm run build && node dist/playground.js",
     "test": "npx jest",
     "build": "tsc",
     "format": "prettier --write \"src/**/*.ts\""
