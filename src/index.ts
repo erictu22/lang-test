@@ -1,5 +1,3 @@
-#!/usr/bin/env node
-
 import { Command } from "commander";
 import { EvaluatorOptions, OpenAiEvaluator } from "./api/evaluate";
 import { Message, Predicate } from "./shared/models";
@@ -11,37 +9,59 @@ program
   .requiredOption("-m, --model <model>", "OpenAI model")
   .requiredOption("-n, --numTrials <numTrials>", "Number of trials")
   .requiredOption(
-    "-i, --inputPrompts <inputPrompts>",
-    "Input prompts (JSON list)"
+    "-p, --targetPrompt <targetPrompt>",
+    "The target prompt for testing"
   )
   .requiredOption(
-    "-e, --evalPrompts <evalPrompts>",
-    "Evaluation prompts (JSON list)"
+    "-e, --predicates <predicates>",
+    'Predicates (Example format [{"type": "prompt", "id": "1", "content": "Is the output a number?"}])'
   )
+  .requiredOption("-t, --maxTokens <maxTokens>", "Max tokens")
   .parse(process.argv);
 
-const { apiKey, model, numTrials, inputPrompts, evalPrompts } = program.opts();
+const { apiKey, model, numTrials, targetPrompt, predicates, maxTokens } =
+  program.opts();
 const evaluatorOptions: EvaluatorOptions = {
-  inputPrompts: parseInputPrompts(inputPrompts),
-  predicates: parseEvalPrompts(evalPrompts),
+  inputPrompts: [{ role: "user", content: targetPrompt }],
+  predicates: parsePredicates(predicates),
   numTrials: parseInt(numTrials),
 };
 
-const evaluator = new OpenAiEvaluator(apiKey, model, evaluatorOptions);
+const evaluator = new OpenAiEvaluator(
+  apiKey,
+  model,
+  parseInt(maxTokens),
+  evaluatorOptions
+);
 
 (async () => {
   try {
     const result = await evaluator.evaluate();
-    console.log("Evaluation result:", result);
+    console.log(result);
   } catch (error) {
     console.error("Error occurred during evaluation:", error);
   }
 })();
 
-function parseInputPrompts(inputPrompts: string): Message[] {
-  return []; // TODO: implement
-}
+function parsePredicates(predicateStr: string): Predicate[] {
+  const predicateListObj: any = JSON.parse(predicateStr);
 
-function parseEvalPrompts(evalPrompts: string): Predicate[] {
-  return []; // TODO: implement
+  // verify that the object conforms to the Predicate interface
+  if (!Array.isArray(predicateListObj)) {
+    throw new Error("Predicates must be an array");
+  }
+
+  for (const predicate of predicateListObj) {
+    if (!("type" in predicate)) {
+      throw new Error("Predicate must have a type");
+    }
+    if (!("id" in predicate)) {
+      throw new Error("Predicate must have an id");
+    }
+    if (!("content" in predicate)) {
+      throw new Error("Predicate must have content");
+    }
+  }
+
+  return predicateListObj; // TODO: implement
 }

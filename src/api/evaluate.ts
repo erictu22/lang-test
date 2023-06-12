@@ -2,21 +2,33 @@ import { response } from "express";
 import { Predicate, Message, OpenAIModel } from "../shared/models";
 import { OpenAIApi, Configuration } from "openai";
 
+const RATE_LIMIT_DELAY = 10;
+
+interface EvaluationUpdate {
+  predicateId: string;
+  targetResponse: string;
+  didPass: boolean;
+  updatedCounts: Record<string, number>;
+}
+
 export type EvaluatorOptions = {
   readonly inputPrompts: Message[];
   readonly predicates: Predicate[];
   readonly numTrials: number;
+  readonly updateHandler?: (update: EvaluationUpdate) => void;
 };
 
 abstract class Evaluator {
   protected inputPrompts: Message[];
   protected predicates: Predicate[];
   protected numTrials: number;
+  protected updateHandler: undefined | ((update: EvaluationUpdate) => void);
 
   constructor(options: EvaluatorOptions) {
     this.inputPrompts = options.inputPrompts;
     this.numTrials = options.numTrials;
     this.predicates = options.predicates;
+    this.updateHandler = options.updateHandler;
   }
 
   async evaluate(): Promise<Record<string, number>> {
@@ -33,13 +45,18 @@ abstract class Evaluator {
 
     const responsePromises: Promise<void>[] = [];
     for (let trialNum = 0; trialNum < this.numTrials; trialNum++) {
-      const evaulation = this.fetchPromptResponse().then(
-        async (targetResponse) => {
+      // add a delay here to avoid hitting the OpenAI API rate limit
+      await new Promise((resolve) => setTimeout(resolve, RATE_LIMIT_DELAY));
+
+      const evaulation = this.fetchPromptResponse()
+        .then(async (targetResponse) => {
           if (targetResponse === undefined)
             throw new Error("Model returned an empty response");
           await this.evaluateResponse(targetResponse, responsePredicateMatches);
-        }
-      );
+        })
+        .catch((e) => {
+          console.log(`Error fetching prompt response: ${e}`);
+        });
       responsePromises.push(evaulation);
     }
 
@@ -52,13 +69,31 @@ abstract class Evaluator {
     responsePredicateMatches: Record<string, number>
   ) {
     for (const predicate of this.predicates) {
-      const didPassEval = await this.applyPredicate(predicate, targetResponse);
+      // add a delay here to avoid hitting the OpenAI API rate limit
+      await new Promise((resolve) => setTimeout(resolve, RATE_LIMIT_DELAY));
+
+      let didPassEval = false;
+
+      try {
+        didPassEval = await this.applyPredicate(predicate, targetResponse);
+      } catch (e) {
+        console.log(`Error applying predicate ${predicate.id}: ${e}`);
+      }
 
       if (!responsePredicateMatches[predicate.id])
         responsePredicateMatches[predicate.id] = 0;
 
       if (didPassEval) {
         responsePredicateMatches[predicate.id]++;
+      }
+
+      if (this.updateHandler) {
+        this.updateHandler({
+          predicateId: predicate.id,
+          targetResponse: targetResponse,
+          didPass: didPassEval,
+          updatedCounts: responsePredicateMatches,
+        });
       }
     }
   }
