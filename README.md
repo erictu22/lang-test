@@ -1,6 +1,54 @@
 # LangTest (WIP)
 LangTest is a semi-objective prompt testing framework that uses a frozen model (gpt-3.5-turbo-0301) and/or regular expressions to verify certain aspects of a given prompt’s responses.
 
+# Example Usage
+You can run the following snippet by running `npm run start` from the root directory
+```javascript
+const evaluationOptions : EvaluatorOptions = {
+  prompt: [
+    {
+      role: "user",
+      content: "List me some red and yellow fruits"
+    }
+  ],
+  predicates: [
+    {
+      id: "Were apples mentioned?",
+      type: "prompt",
+      content: "Does the following text contain the word 'apple'?"
+    },
+    {
+      id: "Was the exact word 'Banana' mentioned?",
+      type: "regexp",
+      content: ".*Banana.*"
+    }
+  ],
+  numTrials: 10,
+  updateHandler: (update) => {
+    console.log(`Applying "${update.predicateId}" to "${update.targetResponse}"`);
+    console.log(`response ${update.didPass ? "passed" : "failed"}`)
+}
+};
+
+const openAiApiKey = "OPEN_AI_API_KEY";
+const model : OpenAIModel = 'gpt-3.5-turbo';
+const maxTokens = 100;
+
+const evaluator = new OpenAiEvaluator(openAiApiKey, model, maxTokens, evaluationOptions);
+evaluator.evaluate().then((results) => console.log(results));
+```
+
+### Response
+```javascript
+{
+  "Was the exact word 'Banana' mentioned?": 4,
+  'Were apples mentioned?': 9
+}
+```
+Note: Be mindful of the OpenAI rate limits
+
+This example creates a new `OpenAIEvaluator` object and runs an evaluation of the OpenAI model specified by `model`. The evaluation generates responses using the input prompt provided, and applies two predicates to each response to determine whether the response contains the word "apple" and whether it matches the regular expression ".*banana.*". The evaluation is run 10 times, and the results are printed to the console.
+
 # CLI
 
 A Command Line Interface (CLI) to evaluate OpenAI models based on a set of user-defined predicates.
@@ -96,51 +144,3 @@ async evaluate(): Promise<Record<string, number>>
 This method generates responses using the OpenAI API and applies the set of predicates to each response. It returns a dictionary containing the number of times each predicate passed.
 
 This method applies the "prompt" type of predicate to a response. It takes a string `prompt` representing the prompt to use for generating the response, and a string `inputPromptResponse` representing the response to which the prompt is being applied. It returns a boolean indicating whether the predicate passed or failed.
-
-# Example Usage
-You can run the following snippet by running `npm run start` from the root directory
-```javascript
-const evaluationOptions : EvaluatorOptions = {
-  prompt: [
-    {
-      role: "user",
-      content: "List me some red and yellow fruits"
-    }
-  ],
-  predicates: [
-    {
-      id: "Were apples mentioned?",
-      type: "prompt",
-      content: "Does the following text contain the word 'apple'?"
-    },
-    {
-      id: "Was the exact word 'Banana' mentioned?",
-      type: "regexp",
-      content: ".*Banana.*"
-    }
-  ],
-  numTrials: 10,
-  updateHandler: (update) => {
-    console.log(`Applying "${update.predicateId}" to "${update.targetResponse}"`);
-    console.log(`response ${update.didPass ? "passed" : "failed"}`)
-}
-};
-
-const openAiApiKey = "OPEN_AI_API_KEY";
-const model : OpenAIModel = 'gpt-3.5-turbo';
-const maxTokens = 100;
-
-const evaluator = new OpenAiEvaluator(openAiApiKey, model, maxTokens, evaluationOptions);
-evaluator.evaluate().then((results) => console.log(results));
-```
-
-### Response
-```javascript
-{
-  "Was the exact word 'Banana' mentioned?": 4,
-  'Were apples mentioned?': 9
-}
-```
-Note: Be mindful of the OpenAI rate limits
-
-This example creates a new `OpenAIEvaluator` object and runs an evaluation of the OpenAI model specified by `model`. The evaluation generates responses using the input prompt provided, and applies two predicates to each response to determine whether the response contains the word "apple" and whether it matches the regular expression ".*banana.*". The evaluation is run 10 times, and the results are printed to the console.
